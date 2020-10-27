@@ -1,6 +1,6 @@
 {
     "name": "cindy-lmz/think6-libray",
-    "type": "project",
+    "type": "library",
     "license": "MIT",
     "authors": [
         {
@@ -8,7 +8,6 @@
             "email": "1481380328@qq.com"
         }
     ],
-    "minimum-stability": "dev",
     "require": {
         "ext-gd": "*",
         "ext-curl": "*",
