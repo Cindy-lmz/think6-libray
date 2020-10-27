@@ -39,7 +39,7 @@ class FormHelper extends Helper
             }
             if (false !== $this->class->callback('_form_filter', $data)) {
                 // $this->class->fetch($template, ['vo' => $data]);
-                $this->controller->success($template.'信息请求成功',['vo' => $data]);
+                $this->class->success($template.'信息请求成功',['vo' => $data]);
             } else {
                 return $data;
             }
@@ -49,9 +49,9 @@ class FormHelper extends Helper
                 $result = data_save($query, $data, $field, $where) !== false;
                 if (false !== $this->class->callback('_form_result', $result, $data)) {
                     if ($result !== false) {
-                        $this->controller->success('成功','');
+                        $this->class->success('成功','');
                     } else {
-                        $this->controller->error('失败','',1010);
+                        $this->class->error('失败','',1010);
                     }
                 }
                 return $result;
