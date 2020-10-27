@@ -1,19 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
-// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
 
 namespace think\admin\service;
 
@@ -21,7 +7,7 @@ use think\admin\extend\HttpExtend;
 use think\admin\Service;
 
 /**
- * 旧助通短信接口服务
+ * 短信业务扩展服务
  * Class MessageService
  * @package app\store\service
  * =================================
@@ -68,7 +54,7 @@ class MessageService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    protected function initialize(): MessageService
+    protected function initialize()
     {
         $this->table = 'SystemMessageHistory';
         $this->chinaUsername = sysconf('sms_zt.china_username');
@@ -84,7 +70,7 @@ class MessageService extends Service
      * @param string $password 账号密码
      * @return $this
      */
-    public function configChina(string $username, string $password): MessageService
+    public function configChina($username, $password): MessageService
     {
         $this->chinaUsername = $username;
         $this->chinaPassword = $password;
@@ -97,7 +83,7 @@ class MessageService extends Service
      * @param string $password 账号密码
      * @return $this
      */
-    public function configGlobe(string $username, string $password): MessageService
+    public function configGlobe($username, $password): MessageService
     {
         $this->globeUsername = $username;
         $this->globePassword = $password;
@@ -109,7 +95,7 @@ class MessageService extends Service
      * @param string $table
      * @return $this
      */
-    public function setSaveTable(string $table): MessageService
+    public function setSaveTable($table): MessageService
     {
         $this->table = $table;
         return $this;
@@ -121,7 +107,7 @@ class MessageService extends Service
      * @param array $params
      * @return string
      */
-    public function buildContent(string $content, array $params = []): string
+    public function buildContent($content, array $params = [])
     {
         foreach ($params as $key => $value) {
             $content = str_replace("{{$key}}", $value, $content);
@@ -131,15 +117,15 @@ class MessageService extends Service
 
     /**
      * 发送国内短信验证码
-     * @param integer|string $phone 手机号
-     * @param integer|string $content 短信内容
-     * @param integer|string $productid 短信通道
+     * @param string $phone 手机号
+     * @param string $content 短信内容
+     * @param string $productid 短信通道
      * @return boolean
      */
-    public function sendChinaSms($phone, $content, $productid = '676767'): bool
+    public function sendChinaSms($phone, $content, $productid = '676767')
     {
         $tkey = date("YmdHis");
-        $result = HttpExtend::get('http://www.ztsms.cn/sendNSms.do', [
+        $result = HttpExtend::post('http://www.ztsms.cn/sendNSms.do', [
             'tkey'      => $tkey,
             'mobile'    => $phone,
             'content'   => $content,
@@ -147,7 +133,7 @@ class MessageService extends Service
             'productid' => $productid,
             'password'  => md5(md5($this->chinaPassword) . $tkey),
         ]);
-        [$code, $message] = explode(',', $result . ',');
+        list($code, $message) = explode(',', $result . ',');
         $this->app->db->name($this->table)->insert([
             'phone' => $phone, 'region' => '860', 'content' => $content, 'result' => $result,
         ]);
@@ -156,7 +142,7 @@ class MessageService extends Service
 
     /**
      * 发送国内短信验证码
-     * @param integer|string $phone 目标手机
+     * @param string $phone 目标手机
      * @param integer $wait 等待时间
      * @param string $type 短信模板
      * @return array
@@ -164,14 +150,14 @@ class MessageService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function sendChinaSmsByCode($phone, int $wait = 120, string $type = 'sms_reg_template'): array
+    public function sendChinaSmsByCode($phone, $wait = 120, $type = 'sms_reg_template')
     {
         $cache = $this->app->cache->get($ckey = "{$type}_{$phone}", []);
         if (is_array($cache) && isset($cache['time']) && $cache['time'] > time() - $wait) {
             $dtime = ($cache['time'] + $wait < time()) ? 0 : ($wait - time() + $cache['time']);
             return [1, '短信验证码已经发送！', ['time' => $dtime]];
         }
-        [$code, $content] = [rand(1000, 9999), sysconf($type)];
+        list($code, $content) = [rand(1000, 9999), sysconf($type)];
         if (empty($content) || stripos($content, '{code}') === false) {
             $content = '您的验证码为{code}，请在十分钟内完成操作！';
         }
@@ -186,12 +172,12 @@ class MessageService extends Service
 
     /**
      * 验证手机短信验证码
-     * @param integer|string $phone 目标手机
-     * @param integer|string $code 短信验证码
+     * @param string $phone 目标手机
+     * @param string $code 短信验证码
      * @param string $type 短信模板
      * @return boolean
      */
-    public function check($phone, $code, string $type = 'sms_reg_template'): bool
+    public function check($phone, $code, $type = 'sms_reg_template')
     {
         $cache = $this->app->cache->get($cachekey = "{$type}_{$phone}", []);
         return is_array($cache) && isset($cache['code']) && $cache['code'] == $code;
@@ -204,7 +190,7 @@ class MessageService extends Service
     public function queryChinaSmsBalance()
     {
         $tkey = date("YmdHis");
-        $result = HttpExtend::get('http://www.ztsms.cn/balanceN.do', [
+        $result = HttpExtend::post('http://www.ztsms.cn/balanceN.do', [
             'username' => $this->chinaUsername, 'tkey' => $tkey,
             'password' => md5(md5($this->chinaPassword) . $tkey),
         ]);
@@ -237,18 +223,18 @@ class MessageService extends Service
 
     /**
      * 发送国际短信内容
-     * @param integer|string $code 国家代码
-     * @param integer|string $mobile 手机号码
+     * @param string $code 国家代码
+     * @param string $mobile 手机号码
      * @param string $content 发送内容
      * @return boolean
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function sendGlobeSms($code, $mobile, string $content): bool
+    public function sendGlobeSms($code, $mobile, $content)
     {
         $tkey = date("YmdHis");
-        $result = HttpExtend::get('http://intl.zthysms.com/intSendSms.do', [
+        $result = HttpExtend::post('http://intl.zthysms.com/intSendSms.do', [
             'tkey'     => $tkey, 'code' => $code, 'mobile' => $mobile,
             'content'  => $content, 'username' => sysconf('sms_zt_username2'),
             'password' => md5(md5(sysconf('sms_zt_password2')) . $tkey),
@@ -263,10 +249,10 @@ class MessageService extends Service
      * 查询国际短信余额
      * @return array
      */
-    public function queryGlobeSmsBalance(): array
+    public function queryGlobeSmsBalance()
     {
         $tkey = date("YmdHis");
-        $result = HttpExtend::get('http://intl.zthysms.com/intBalance.do', [
+        $result = HttpExtend::post('http://intl.zthysms.com/intBalance.do', [
             'username' => $this->globeUsername, 'tkey' => $tkey, 'password' => md5(md5($this->globePassword) . $tkey),
         ]);
         if (!is_numeric($result) && ($state = intval($result)) && isset($this->globeMessageMap[$state])) {
@@ -280,7 +266,7 @@ class MessageService extends Service
      * 获取国际地域编号
      * @return array
      */
-    public function getGlobeRegionMap(): array
+    public function getGlobeRegionMap()
     {
         return [
             ['title' => '中国 台湾', 'english' => 'Taiwan', 'code' => 886],

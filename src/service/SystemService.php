@@ -1,20 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
-// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
-
 namespace think\admin\service;
 
 use think\admin\Service;
@@ -49,21 +34,17 @@ class SystemService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function set(string $name, $value = '')
+    public function set($name, $value = '')
     {
-        $this->data = [];
-        [$type, $field] = $this->_parse($name, 'base');
+        [$this->data, $count] = [[], 0];
+        [$type, $field] = $this->parse($name, 'base');
         if (is_array($value)) {
-            $count = 0;
-            foreach ($value as $kk => $vv) {
-                $count += $this->set("{$field}.{$kk}", $vv);
-            }
+            foreach ($value as $kk => $vv) $count += $this->set("{$field}.{$kk}", $vv);
             return $count;
         } else {
             $this->app->cache->delete($this->table);
-            $map = ['type' => $type, 'name' => $field];
-            $data = array_merge($map, ['value' => $value]);
-            $query = $this->app->db->name($this->table)->master(true)->where($map);
+            $data = ['type' => $type, 'name' => $field, 'value' => $value];
+            $query = $this->app->db->name($this->table)->where(['type' => $type, 'name' => $name]);
             return (clone $query)->count() > 0 ? $query->update($data) : $query->insert($data);
         }
     }
@@ -77,14 +58,12 @@ class SystemService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function get(string $name = '', string $default = '')
+    public function get($name = '', $default = '')
     {
-        if (empty($this->data)) {
-            $this->app->db->name($this->table)->cache($this->table)->select()->map(function ($item) {
-                $this->data[$item['type']][$item['name']] = $item['value'];
-            });
-        }
-        [$type, $field, $outer] = $this->_parse($name, 'base');
+        [$type, $field, $outer] = $this->parse($name, 'base');
+        if (empty($this->data)) $this->app->db->name($this->table)->cache($this->table)->select()->map(function ($item) {
+            $this->data[$item['type']][$item['name']] = $item['value'];
+        });
         if (empty($name)) {
             return $this->data;
         } elseif (isset($this->data[$type])) {
@@ -109,7 +88,7 @@ class SystemService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function save($dbQuery, array $data, string $key = 'id', array $where = [])
+    public function save($dbQuery, $data, $key = 'id', array $where = [])
     {
         $val = $data[$key] ?? null;
         $query = (is_string($dbQuery) ? $this->app->db->name($dbQuery) : $dbQuery)->master()->strict(false)->where($where);
@@ -123,7 +102,7 @@ class SystemService extends Service
      * @param string $type 配置类型
      * @return array
      */
-    private function _parse(string $rule, string $type = 'base'): array
+    private function parse($rule, $type = 'base')
     {
         if (stripos($rule, '.') !== false) {
             [$type, $rule] = explode('.', $rule, 2);
@@ -140,7 +119,7 @@ class SystemService extends Service
      * @param boolean|string $domain 域名
      * @return string
      */
-    public function sysuri(string $url = '', array $vars = [], $suffix = true, $domain = false): string
+    public function sysuri($url = '', array $vars = [], $suffix = true, $domain = false)
     {
         $location = $this->app->route->buildUrl($url, $vars)->suffix($suffix)->domain($domain)->build();
         [$d1, $d2, $d3] = [$this->app->config->get('app.default_app'), $this->app->config->get('route.default_controller'), $this->app->config->get('route.default_action')];
@@ -156,7 +135,7 @@ class SystemService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function setData(string $name, $value)
+    public function setData($name, $value)
     {
         return $this->save('SystemData', ['name' => $name, 'value' => serialize($value)], 'name');
     }
@@ -167,7 +146,7 @@ class SystemService extends Service
      * @param mixed $default
      * @return mixed
      */
-    public function getData(string $name, $default = [])
+    public function getData($name, $default = [])
     {
         try {
             $value = $this->app->db->name('SystemData')->where(['name' => $name])->value('value', null);
@@ -178,31 +157,19 @@ class SystemService extends Service
     }
 
     /**
-     * 写入系统日志内容
+     * 写入系统日志
      * @param string $action
      * @param string $content
-     * @return boolean
+     * @return integer
      */
-    public function setOplog(string $action, string $content): bool
+    public function setOplog($action, $content)
     {
-        $oplog = $this->getOplog($action, $content);
-        return $this->app->db->name('SystemOplog')->insert($oplog) !== false;
-    }
-
-    /**
-     * 获取系统日志内容
-     * @param string $action
-     * @param string $content
-     * @return array
-     */
-    public function getOplog(string $action, string $content): array
-    {
-        return [
+        return $this->app->db->name('SystemOplog')->insert([
             'node'     => NodeService::instance()->getCurrent(),
             'action'   => $action, 'content' => $content,
             'geoip'    => $this->app->request->ip() ?: '127.0.0.1',
             'username' => AdminService::instance()->getUserName() ?: '-',
-        ];
+        ]);
     }
 
     /**
@@ -224,7 +191,7 @@ class SystemService extends Service
      * @param string $type 运行模式（dev|demo|local）
      * @return boolean
      */
-    public function checkRunMode(string $type = 'dev'): bool
+    public function checkRunMode($type = 'dev'): bool
     {
         $domain = $this->app->request->host(true);
         $isDemo = is_numeric(stripos($domain, 'thinkadmin.top'));
@@ -249,22 +216,22 @@ class SystemService extends Service
      * @param null|boolean $state
      * @return boolean
      */
-    public function productMode(?bool $state = null): bool
+    public function productMode($state = null): bool
     {
         if (is_null($state)) {
             return $this->bindRuntime();
         } else {
-            return $this->setRuntime([], $state ? 'product' : 'debug');
+            return $this->setRuntime([], $state ? 'product' : 'developoer');
         }
     }
 
     /**
      * 获取实时运行配置
-     * @param null|string $name 配置名称
-     * @param array $default 配置内容
-     * @return array|string
+     * @param string $key
+     * @param array $default
+     * @return array
      */
-    public function getRuntime(?string $name = null, array $default = [])
+    public function getRuntime($key = null, $default = [])
     {
         $filename = "{$this->app->getRootPath()}runtime/config.json";
         if (file_exists($filename) && is_file($filename)) {
@@ -273,18 +240,18 @@ class SystemService extends Service
         if (empty($data) || !is_array($data)) $data = [];
         if (empty($data['map']) || !is_array($data['map'])) $data['map'] = [];
         if (empty($data['uri']) || !is_array($data['uri'])) $data['uri'] = [];
-        if (empty($data['run']) || !is_string($data['run'])) $data['run'] = 'debug';
-        return is_null($name) ? $data : ($data[$name] ?? $default);
+        if (empty($data['run']) || !is_string($data['run'])) $data['run'] = 'developer';
+        return is_null($key) ? $data : ($data[$key] ?? $default);
     }
 
     /**
      * 设置实时运行配置
-     * @param null|array $map 应用映射
-     * @param null|mixed $run 支持模式
-     * @param null|array $uri 域名映射
+     * @param array|null $map 应用映射
+     * @param string|null $run 支持模式
+     * @param array|null $uri 域名映射
      * @return boolean 是否调试模式
      */
-    public function setRuntime(?array $map = [], ?string $run = null, ?array $uri = []): bool
+    public function setRuntime(array $map = [], $run = null, array $uri = []): bool
     {
         $data = $this->getRuntime();
         $data['run'] = is_string($run) ? $run : $data['run'];
@@ -300,14 +267,20 @@ class SystemService extends Service
      * @param array $data 配置数据
      * @return boolean 是否调试模式
      */
-    public function bindRuntime(array $data = []): bool
+    public function bindRuntime($data = []): bool
     {
+        // 获取运行配置
         if (empty($data)) $data = $this->getRuntime();
-        $bind['app_map'] = $this->app->config->get('app.app_map', []);
-        $bind['domain_bind'] = $this->app->config->get('app.domain_bind', []);
-        if (count($data['map']) > 0) $bind['app_map'] = $this->uniqueArray($bind['app_map'], $data['map']);
-        if (count($data['uri']) > 0) $bind['domain_bind'] = $this->uniqueArray($bind['domain_bind'], $data['uri']);
-        $this->app->config->set($bind, 'app');
+        // 动态设置应用绑定
+        $config = ['app_map' => [], 'domain_bind' => []];
+        if (isset($data['map']) && is_array($data['map']) && count($data['map']) > 0) {
+            $config['app_map'] = $this->uniqueArray($this->app->config->get('app.app_map', []), $data['map']);
+        }
+        if (isset($data['uri']) && is_array($data['uri']) && count($data['uri']) > 0) {
+            $config['domain_bind'] = $this->uniqueArray($this->app->config->get('app.domain_bind', []), $data['uri']);
+        }
+        // 动态设置运行模式
+        $this->app->config->set($config, 'app');
         return $this->app->debug($data['run'] !== 'product')->isDebug();
     }
 
@@ -318,7 +291,9 @@ class SystemService extends Service
      */
     private function uniqueArray(...$args): array
     {
-        return array_unique(array_reverse(array_merge(...$args)));
+        $unique = array_unique(array_reverse(array_merge(...$args)));
+        foreach ($unique as $kk => $vv) if ($kk == $vv) unset($unique[$kk]);
+        return $unique;
     }
 
     /**
@@ -326,8 +301,8 @@ class SystemService extends Service
      */
     public function pushRuntime(): void
     {
-        $connection = $this->app->db->getConfig('default');
-        $this->app->console->call("optimize:schema", ["--connection={$connection}"]);
+        $type = $this->app->db->getConfig('default');
+        $this->app->console->call("optimize:schema", ["--connection={$type}"]);
         foreach (NodeService::instance()->getModules() as $module) {
             $path = $this->app->getRootPath() . 'runtime' . DIRECTORY_SEPARATOR . $module;
             file_exists($path) && is_dir($path) or mkdir($path, 0755, true);

@@ -1,23 +1,7 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
-// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
-
 namespace think\admin\service;
 
-use think\admin\Exception;
 use think\admin\extend\CodeExtend;
 use think\admin\Service;
 
@@ -62,7 +46,7 @@ class QueueService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function initialize($code = 0): QueueService
+    public function initialize($code = 0)
     {
         if (!empty($code)) {
             $this->code = $code;
@@ -86,7 +70,7 @@ class QueueService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function reset($wait = 0): QueueService
+    public function reset($wait = 0)
     {
         if (empty($this->record)) {
             $this->app->log->error("Qeueu reset failed, Queue {$this->code} data cannot be empty!");
@@ -106,7 +90,7 @@ class QueueService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function addCleanQueue(): QueueService
+    public function addCleanQueue()
     {
         return $this->register('定时清理系统任务数据', "xadmin:queue clean", 0, [], 0, 3600);
     }
@@ -125,7 +109,7 @@ class QueueService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function register(string $title, string $command, int $later = 0, array $data = [], int $rscript = 0, int $loops = 0): QueueService
+    public function register($title, $command, $later = 0, $data = [], $rscript = 0, $loops = 0)
     {
         $map = [['title', '=', $title], ['status', 'in', [1, 2]]];
         if (empty($rscript) && ($queue = $this->app->db->name('SystemQueue')->where($map)->find())) {
@@ -152,12 +136,11 @@ class QueueService extends Service
      * 设置任务进度信息
      * @param null|integer $status 任务状态
      * @param null|string $message 进度消息
-     * @param null|float $progress 进度数值
+     * @param null|integer $progress 进度数值
      * @return array
      */
-    public function progress(?int $status = null, ?string $message = null, $progress = null): array
+    public function progress($status = null, $message = null, $progress = null)
     {
-        $ckey = "queue_{$this->code}_progress";
         if (is_numeric($status) && intval($status) === 3) {
             if (!is_numeric($progress)) $progress = '100.00';
             if (is_null($message)) $message = '>>> 任务已经完成 <<<';
@@ -167,7 +150,7 @@ class QueueService extends Service
             if (is_null($message)) $message = '>>> 任务执行失败 <<<';
         }
         try {
-            $data = $this->app->cache->get($ckey, [
+            $data = $this->app->cache->get("queue_{$this->code}_progress", [
                 'code' => $this->code, 'status' => $status, 'message' => $message, 'progress' => $progress, 'history' => [],
             ]);
         } catch (\Exception|\Error $exception) {
@@ -190,47 +173,9 @@ class QueueService extends Service
             if (count($data['history']) > 10) {
                 $data['history'] = array_slice($data['history'], -10);
             }
-            $this->app->cache->set($ckey, $data, 86400);
+            $this->app->cache->set("queue_{$this->code}_progress", $data, 86400);
         }
         return $data;
-    }
-
-    /**
-     * 更新任务进度
-     * @param integer $total 记录总和
-     * @param integer $used 当前记录
-     * @param string $message 文字描述
-     */
-    public function message(int $total, int $used, string $message = ''): void
-    {
-        $total = $total < 1 ? 1 : $total;
-        $prefix = str_pad("{$used}", strlen("{$total}"), '0', STR_PAD_LEFT);
-        $message = "[{$prefix}/{$total}] {$message}";
-        if (defined('WorkQueueCode')) {
-            $this->progress(2, $message, sprintf("%.2f", $used / $total * 100));
-        } else {
-            echo $message . PHP_EOL;
-        }
-    }
-
-    /**
-     * 任务执行成功
-     * @param string $message 消息内容
-     * @throws Exception
-     */
-    public function success(string $message): void
-    {
-        throw new Exception($message, 3, $this->code);
-    }
-
-    /**
-     * 任务执行失败
-     * @param string $message 消息内容
-     * @throws Exception
-     */
-    public function error(string $message): void
-    {
-        throw new Exception($message, 4, $this->code);
     }
 
     /**

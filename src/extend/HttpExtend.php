@@ -1,19 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | Library for ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
-// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
 
 namespace think\admin\extend;
 
@@ -27,13 +13,13 @@ class HttpExtend
     /**
      * 以 GET 模拟网络请求
      * @param string $location HTTP请求地址
-     * @param array|string $data GET请求参数
+     * @param array|string $query GET请求参数
      * @param array $options CURL请求参数
      * @return boolean|string
      */
-    public static function get(string $location, $data = [], array $options = [])
+    public static function get($location, $query = [], array $options = [])
     {
-        $options['query'] = $data;
+        $options['query'] = $query;
         return static::request('get', $location, $options);
     }
 
@@ -44,7 +30,7 @@ class HttpExtend
      * @param array $options CURL请求参数
      * @return boolean|string
      */
-    public static function post(string $location, $data = [], array $options = [])
+    public static function post($location, $data = [], array $options = [])
     {
         $options['data'] = $data;
         return static::request('post', $location, $options);
@@ -60,9 +46,9 @@ class HttpExtend
      * @param boolean $returnHeader 是否返回头部信息
      * @return boolean|string
      */
-    public static function submit(string $url, array $data = [], array $file = [], array $header = [], string $method = 'POST', bool $returnHeader = true)
+    public static function submit($url, array $data = [], array $file = [], array $header = [], $method = 'POST', $returnHeader = true)
     {
-        [$line, $boundary] = [[], CodeExtend::random(18)];
+        list($line, $boundary) = [[], CodeExtend::random(18)];
         foreach ($data as $key => $value) {
             $line[] = "--{$boundary}";
             $line[] = "Content-Disposition: form-data; name=\"{$key}\"";
@@ -87,27 +73,23 @@ class HttpExtend
      * @param array $options 请求参数[headers,query,data,cookie,cookie_file,timeout,returnHeader]
      * @return boolean|string
      */
-    public static function request(string $method, string $location, array $options = [])
+    public static function request($method, $location, array $options = [])
     {
         // GET 参数设置
         if (!empty($options['query'])) {
-            $location .= strpos($location, '?') !== false ? '&' : '?';
-            if (is_array($options['query'])) {
-                $location .= http_build_query($options['query']);
-            } elseif (is_string($options['query'])) {
-                $location .= $options['query'];
-            }
+            $split = strpos($location, '?') !== false ? '&' : '?';
+            $location .= $split . http_build_query($options['query']);
         }
         $curl = curl_init();
         // Agent 代理设置
         curl_setopt($curl, CURLOPT_USERAGENT, static::getUserAgent());
+        // CURL 头信息设置
+        if (!empty($options['headers'])) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, $options['headers']);
+        }
         // Cookie 信息设置
         if (!empty($options['cookie'])) {
             curl_setopt($curl, CURLOPT_COOKIE, $options['cookie']);
-        }
-        // Header 头信息设置
-        if (!empty($options['headers'])) {
-            curl_setopt($curl, CURLOPT_HTTPHEADER, $options['headers']);
         }
         if (!empty($options['cookie_file'])) {
             curl_setopt($curl, CURLOPT_COOKIEJAR, $options['cookie_file']);
@@ -148,7 +130,7 @@ class HttpExtend
      * 获取浏览器代理信息
      * @return string
      */
-    private static function getUserAgent(): string
+    private static function getUserAgent()
     {
         if (!empty($_SERVER['HTTP_USER_AGENT'])) return $_SERVER['HTTP_USER_AGENT'];
         $agents = [

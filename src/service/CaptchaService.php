@@ -1,19 +1,6 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
-// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
 
-declare (strict_types=1);
 
 namespace think\admin\service;
 
@@ -36,11 +23,11 @@ class CaptchaService extends Service
     private $fontsize = 20; // 指定字体大小
 
     /**
-     * 验证码服务初始化
+     * 服务初始化
      * @param array $config
      * @return static
      */
-    public function initialize(array $config = [])
+    public function initialize($config = [])
     {
         // 动态配置属性
         foreach ($config as $k => $v) if (isset($this->$k)) $this->$k = $v;
@@ -64,7 +51,7 @@ class CaptchaService extends Service
      * @param array $config
      * @return $this
      */
-    public function config(array $config = [])
+    public function config($config = [])
     {
         return $this->initialize($config);
     }
@@ -73,7 +60,7 @@ class CaptchaService extends Service
      * 获取验证码值
      * @return string
      */
-    public function getCode(): string
+    public function getCode()
     {
         return $this->code;
     }
@@ -82,7 +69,7 @@ class CaptchaService extends Service
      * 获取图片内容
      * @return string
      */
-    public function getData(): string
+    public function getData()
     {
         return "data:image/png;base64,{$this->createImage()}";
     }
@@ -91,7 +78,7 @@ class CaptchaService extends Service
      * 获取验证码编号
      * @return string
      */
-    public function getUniqid(): string
+    public function getUniqid()
     {
         return $this->uniqid;
     }
@@ -100,7 +87,7 @@ class CaptchaService extends Service
      * 获取验证码数据
      * @return array
      */
-    public function getAttrs(): array
+    public function getAttrs()
     {
         return [
             'code'   => $this->getCode(),
@@ -112,10 +99,10 @@ class CaptchaService extends Service
     /**
      * 检查验证码是否正确
      * @param string $code 需要验证的值
-     * @param null|string $uniqid 验证码编号
+     * @param string $uniqid 验证码编号
      * @return boolean
      */
-    public function check(string $code, ?string $uniqid = null): bool
+    public function check($code, $uniqid = null)
     {
         $_uni = is_string($uniqid) ? $uniqid : input('uniqid', '-');
         $_val = $this->app->cache->get($_uni, '');
@@ -161,9 +148,9 @@ class CaptchaService extends Service
         for ($i = 0; $i < $this->length; $i++) {
             $fontcolor = imagecolorallocate($img, mt_rand(0, 156), mt_rand(0, 156), mt_rand(0, 156));
             if (function_exists('imagettftext')) {
-                imagettftext($img, $this->fontsize, mt_rand(-30, 30), intval($_x * $i + mt_rand(1, 5)), intval($this->height / 1.4), $fontcolor, $this->fontfile, $this->code[$i]);
+                imagettftext($img, $this->fontsize, mt_rand(-30, 30), $_x * $i + mt_rand(1, 5), $this->height / 1.4, $fontcolor, $this->fontfile, $this->code[$i]);
             } else {
-                imagestring($img, 15, intval($_x * $i + mt_rand(10, 15)), mt_rand(10, 30), $this->code[$i], $fontcolor);
+                imagestring($img, 15, $_x * $i + mt_rand(10, 15), mt_rand(10, 30), $this->code[$i], $fontcolor);
             }
         }
         ob_start();

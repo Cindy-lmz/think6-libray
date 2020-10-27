@@ -1,20 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
-// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
-
 namespace think\admin;
 
 use think\admin\service\ProcessService;
@@ -62,7 +47,7 @@ abstract class Queue
      * @param QueueService $queue
      * @return $this
      */
-    public function initialize(QueueService $queue): Queue
+    public function initialize(QueueService $queue)
     {
         $this->queue = $queue;
         return $this;
@@ -71,6 +56,7 @@ abstract class Queue
     /**
      * 执行任务处理内容
      * @param array $data
+     * @return mixed
      */
     abstract public function execute($data = []);
 
@@ -80,7 +66,7 @@ abstract class Queue
      * @param null|integer $progress 进度数值
      * @return Queue
      */
-    protected function setQueueProgress(?string $message = null, $progress = null): Queue
+    protected function setQueueProgress($message = null, $progress = null)
     {
         $this->queue->progress(2, $message, $progress);
         return $this;
@@ -91,9 +77,9 @@ abstract class Queue
      * @param string $message 消息内容
      * @throws Exception
      */
-    protected function setQueueSuccess(string $message): void
+    protected function setQueueSuccess($message)
     {
-        $this->queue->success($message);
+        throw new Exception($message, 3, $this->queue->code);
     }
 
     /**
@@ -101,8 +87,8 @@ abstract class Queue
      * @param string $message 消息内容
      * @throws Exception
      */
-    protected function setQueueError(string $message): void
+    protected function setQueueError($message)
     {
-        $this->queue->error($message);
+        throw new Exception($message, 4, $this->queue->code);
     }
 }

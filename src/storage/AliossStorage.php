@@ -1,19 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | Library for ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
-// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
 
 namespace think\admin\storage;
 
@@ -76,14 +62,14 @@ class AliossStorage extends Storage
 
     /**
      * 获取当前实例对象
-     * @param null|string $name
+     * @param null $name
      * @return static
      * @throws \think\admin\Exception
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public static function instance(?string $name = null)
+    public static function instance($name = null)
     {
         return parent::instance('alioss');
     }
@@ -93,10 +79,10 @@ class AliossStorage extends Storage
      * @param string $name 文件名称
      * @param string $file 文件内容
      * @param boolean $safe 安全模式
-     * @param null|string $attname 下载名称
+     * @param string $attname 下载名称
      * @return array
      */
-    public function set(string $name, string $file, bool $safe = false, ?string $attname = null)
+    public function set($name, $file, $safe = false, $attname = null)
     {
         $token = $this->buildUploadToken($name);
         $data = ['key' => $name];
@@ -105,7 +91,8 @@ class AliossStorage extends Storage
         $data['OSSAccessKeyId'] = $this->accessKey;
         $data['success_action_status'] = '200';
         if (is_string($attname) && strlen($attname) > 0) {
-            $data['Content-Disposition'] = 'inline;filename=' . urlencode($attname);
+            $filename = urlencode($attname);
+            $data['Content-Disposition'] = "inline;filename={$filename}";
         }
         $file = ['field' => 'file', 'name' => $name, 'content' => $file];
         if (is_numeric(stripos(HttpExtend::submit($this->upload(), $data, $file), '200 OK'))) {
@@ -121,7 +108,7 @@ class AliossStorage extends Storage
      * @param boolean $safe 安全模式
      * @return false|string
      */
-    public function get(string $name, bool $safe = false)
+    public function get($name, $safe = false)
     {
         return static::curlGet($this->url($name, $safe));
     }
@@ -132,9 +119,9 @@ class AliossStorage extends Storage
      * @param boolean $safe 安全模式
      * @return boolean
      */
-    public function del(string $name, bool $safe = false)
+    public function del($name, $safe = false)
     {
-        [$file] = explode('?', $name);
+        list($file) = explode('?', $name);
         $result = HttpExtend::request('DELETE', "http://{$this->bucket}.{$this->point}/{$file}", [
             'returnHeader' => true, 'headers' => $this->headerSign('DELETE', $file),
         ]);
@@ -147,7 +134,7 @@ class AliossStorage extends Storage
      * @param boolean $safe 安全模式
      * @return boolean
      */
-    public function has(string $name, bool $safe = false)
+    public function has($name, $safe = false)
     {
         $file = $this->delSuffix($name);
         $result = HttpExtend::request('HEAD', "http://{$this->bucket}.{$this->point}/{$file}", [
@@ -160,10 +147,10 @@ class AliossStorage extends Storage
      * 获取文件当前URL地址
      * @param string $name 文件名称
      * @param boolean $safe 安全模式
-     * @param null|string $attname 下载名称
+     * @param string $attname 下载名称
      * @return string
      */
-    public function url(string $name, bool $safe = false, ?string $attname = null): string
+    public function url($name, $safe = false, $attname = null)
     {
         return "{$this->prefix}/{$this->delSuffix($name)}{$this->getSuffix($attname)}";
     }
@@ -174,7 +161,7 @@ class AliossStorage extends Storage
      * @param boolean $safe 安全模式
      * @return string
      */
-    public function path(string $name, bool $safe = false): string
+    public function path($name, $safe = false)
     {
         return $this->url($name, $safe);
     }
@@ -183,10 +170,10 @@ class AliossStorage extends Storage
      * 获取文件存储信息
      * @param string $name 文件名称
      * @param boolean $safe 安全模式
-     * @param null|string $attname 下载名称
+     * @param string $attname 下载名称
      * @return array
      */
-    public function info(string $name, bool $safe = false, ?string $attname = null): array
+    public function info($name, $safe = false, $attname = null)
     {
         return $this->has($name, $safe) ? [
             'url' => $this->url($name, $safe, $attname),
@@ -198,28 +185,28 @@ class AliossStorage extends Storage
      * 获取文件上传地址
      * @return string
      */
-    public function upload(): string
+    public function upload()
     {
-        $protocol = $this->app->request->isSsl() ? 'https' : 'http';
-        return "{$protocol}://{$this->bucket}.{$this->point}";
+        $http = $this->app->request->isSsl() ? 'https' : 'http';
+        return "{$http}://{$this->bucket}.{$this->point}";
     }
 
     /**
      * 获取文件上传令牌
      * @param string $name 文件名称
      * @param integer $expires 有效时间
-     * @param null|string $attname 下载名称
+     * @param string $attname 下载名称
      * @return array
      */
-    public function buildUploadToken(string $name, int $expires = 3600, ?string $attname = null): array
+    public function buildUploadToken($name = null, $expires = 3600, $attname = null)
     {
         $data = [
             'policy'  => base64_encode(json_encode([
                 'conditions' => [['content-length-range', 0, 1048576000]],
                 'expiration' => date('Y-m-d\TH:i:s.000\Z', time() + $expires),
             ])),
-            'keyid'   => $this->accessKey,
             'siteurl' => $this->url($name, false, $attname),
+            'keyid'   => $this->accessKey,
         ];
         $data['signature'] = base64_encode(hash_hmac('sha1', $data['policy'], $this->secretKey, true));
         return $data;
@@ -232,7 +219,7 @@ class AliossStorage extends Storage
      * @param array $header 请求头信息
      * @return array
      */
-    private function headerSign(string $method, string $soruce, array $header = []): array
+    private function headerSign($method, $soruce, $header = [])
     {
         if (empty($header['Date'])) $header['Date'] = gmdate('D, d M Y H:i:s \G\M\T');
         if (empty($header['Content-Type'])) $header['Content-Type'] = 'application/xml';
@@ -251,36 +238,6 @@ class AliossStorage extends Storage
         $header['Authorization'] = "OSS {$this->accessKey}:{$signature}";
         foreach ($header as $key => $value) $header[$key] = "{$key}: {$value}";
         return array_values($header);
-    }
-
-    /**
-     * 阿里云OSS存储区域
-     * @return array
-     */
-    public static function region()
-    {
-        return [
-            'oss-cn-hangzhou.aliyuncs.com'    => '华东 1（杭州）',
-            'oss-cn-shanghai.aliyuncs.com'    => '华东 2（上海）',
-            'oss-cn-qingdao.aliyuncs.com'     => '华北 1（青岛）',
-            'oss-cn-beijing.aliyuncs.com'     => '华北 2（北京）',
-            'oss-cn-zhangjiakou.aliyuncs.com' => '华北 3（张家口）',
-            'oss-cn-huhehaote.aliyuncs.com'   => '华北 5（呼和浩特）',
-            'oss-cn-shenzhen.aliyuncs.com'    => '华南 1（深圳）',
-            'oss-cn-chengdu.aliyuncs.com'     => '西南 1（成都）',
-            'oss-cn-hongkong.aliyuncs.com'    => '中国（香港）',
-            'oss-us-west-1.aliyuncs.com'      => '美国西部 1（硅谷）',
-            'oss-us-east-1.aliyuncs.com'      => '美国东部 1（弗吉尼亚）',
-            'oss-ap-southeast-1.aliyuncs.com' => '亚太东南 1（新加坡）',
-            'oss-ap-southeast-2.aliyuncs.com' => '亚太东南 2（悉尼）',
-            'oss-ap-southeast-3.aliyuncs.com' => '亚太东南 3（吉隆坡）',
-            'oss-ap-southeast-5.aliyuncs.com' => '亚太东南 5（雅加达）',
-            'oss-ap-northeast-1.aliyuncs.com' => '亚太东北 1（日本）',
-            'oss-ap-south-1.aliyuncs.com'     => '亚太南部 1（孟买）',
-            'oss-eu-central-1.aliyuncs.com'   => '欧洲中部 1（法兰克福）',
-            'oss-eu-west-1.aliyuncs.com'      => '英国（伦敦）',
-            'oss-me-east-1.aliyuncs.com'      => '中东东部 1（迪拜）',
-        ];
     }
 
 }

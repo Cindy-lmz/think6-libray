@@ -1,20 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | Library for ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
-// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
-declare (strict_types=1);
-
 namespace think\admin\command;
 
 use Psr\Log\NullLogger;
@@ -51,12 +36,12 @@ class Queue extends Command
     public function configure()
     {
         $this->setName('xadmin:queue');
-        $this->addOption('host', '-H', Option::VALUE_OPTIONAL, 'The host of WebServer.');
-        $this->addOption('port', '-p', Option::VALUE_OPTIONAL, 'The port of WebServer.');
-        $this->addOption('daemon', 'd', Option::VALUE_NONE, 'Run the queue listen in daemon mode');
         $this->addArgument('action', Argument::OPTIONAL, 'stop|start|status|query|listen|clean|dorun|webstop|webstart|webstatus', 'listen');
         $this->addArgument('code', Argument::OPTIONAL, 'Taskcode');
         $this->addArgument('spts', Argument::OPTIONAL, 'Separator');
+        $this->addOption('host', '-H', Option::VALUE_OPTIONAL, 'The host of WebServer.');
+        $this->addOption('port', '-p', Option::VALUE_OPTIONAL, 'The port of WebServer.');
+        $this->addOption('daemon', 'd', Option::VALUE_NONE, 'Run the queue listen in daemon mode');
         $this->setDescription('Asynchronous Command Queue Task for ThinkAdmin');
     }
 
@@ -82,7 +67,7 @@ class Queue extends Command
         if (count($result = $this->process->query("-t {$root} {$root}router.php")) < 1) {
             $this->output->writeln(">> There are no WebServer processes to stop");
         } else foreach ($result as $item) {
-            $this->process->close(intval($item['pid']));
+            $this->process->close($item['pid']);
             $this->output->writeln(">> Successfully sent end signal to process {$item['pid']}");
         }
     }
@@ -96,7 +81,7 @@ class Queue extends Command
         $host = $this->input->getOption('host') ?: '127.0.0.1';
         $root = $this->app->getRootPath() . 'public' . DIRECTORY_SEPARATOR;
         $command = "php -S {$host}:{$port} -t {$root} {$root}router.php";
-        $this->output->comment("># {$command}");
+        $this->output->highlight("># {$command}");
         if (count($result = $this->process->query($command)) > 0) {
             if ($this->process->iswin()) $this->process->exec("start http://{$host}:{$port}");
             $this->output->writeln(">> WebServer process already exist for pid {$result[0]['pid']}");
@@ -118,7 +103,7 @@ class Queue extends Command
     {
         $root = $this->app->getRootPath() . 'public' . DIRECTORY_SEPARATOR;
         if (count($result = $this->process->query("-t {$root} {$root}router.php")) > 0) {
-            $this->output->comment("># {$result[0]['cmd']}");
+            $this->output->highlight("># {$result[0]['cmd']}");
             $this->output->writeln(">> WebServer process {$result[0]['pid']} running");
         } else {
             $this->output->writeln(">> The WebServer process is not running");
@@ -134,7 +119,7 @@ class Queue extends Command
         if (count($result = $this->process->query($keyword)) < 1) {
             $this->output->writeln(">> There are no task processes to stop");
         } else foreach ($result as $item) {
-            $this->process->close(intval($item['pid']));
+            $this->process->close($item['pid']);
             $this->output->writeln(">> Successfully sent end signal to process {$item['pid']}");
         }
     }
@@ -146,7 +131,7 @@ class Queue extends Command
     {
         $this->app->db->name($this->table)->count();
         $command = $this->process->think('xadmin:queue listen');
-        $this->output->comment("># {$command}");
+        $this->output->highlight("># {$command}");
         if (count($result = $this->process->query($command)) > 0) {
             $this->output->writeln(">> Asynchronous daemons already exist for pid {$result[0]['pid']}");
         } else {
@@ -189,11 +174,12 @@ class Queue extends Command
         $this->app->db->name($this->table)->whereOr([$map1, $map2])->chunk(100, function (Collection $result) use ($total, &$loops, &$timeout) {
             foreach ($result->toArray() as $item) {
                 $item['loops_time'] > 0 ? $loops++ : $timeout++;
+                $prefix = str_pad($timeout + $loops, strlen("{$total}"), 0, STR_PAD_LEFT);
                 if ($item['loops_time'] > 0) {
-                    $this->queue->message($total, $timeout + $loops, "正在重置任务 {$item['code']} 为运行");
+                    $this->setQueueProgress("[{$prefix}/{$total}] 正在重置任务 {$item['code']} 为运行", ($timeout + $loops) * 100 / $total);
                     [$status, $message] = [1, intval($item['status']) === 4 ? '任务执行失败，已自动重置任务！' : '任务执行超时，已自动重置任务！'];
                 } else {
-                    $this->queue->message($total, $timeout + $loops, "正在标记任务 {$item['code']} 为超时");
+                    $this->setQueueProgress("[{$prefix}/{$total}] 正在标记任务 {$item['code']} 为超时", ($timeout + $loops) * 100 / $total);
                     [$status, $message] = [4, '任务执行超时，已自动标识为失败！'];
                 }
                 $this->app->db->name($this->table)->where(['id' => $item['id']])->update(['status' => $status, 'exec_desc' => $message]);
@@ -235,7 +221,7 @@ class Queue extends Command
             [$start, $where] = [microtime(true), [['status', '=', 1], ['exec_time', '<=', time()]]];
             foreach ($this->app->db->name($this->table)->where($where)->order('exec_time asc')->select()->toArray() as $vo) try {
                 $command = $this->process->think("xadmin:queue dorun {$vo['code']} -");
-                $this->output->comment("># {$command}");
+                $this->output->highlight("># {$command}");
                 if (count($this->process->query($command)) > 0) {
                     $this->output->writeln(">> Already in progress -> [{$vo['code']}] {$vo['title']}");
                 } else {
@@ -285,9 +271,9 @@ class Queue extends Command
                     // 自定义任务，支持返回消息（支持异常结束，异常码可选择 3|4 设置任务状态）
                     $class = $this->app->make($command, [], true);
                     if ($class instanceof \think\admin\Queue) {
-                        $this->updateQueue(3, $class->initialize($this->queue)->execute($this->queue->data) ?: '');
+                        $this->updateQueue(3, $class->initialize($this->queue)->execute($this->queue->data));
                     } elseif ($class instanceof \think\admin\service\QueueService) {
-                        $this->updateQueue(3, $class->initialize($this->queue->code)->execute($this->queue->data) ?: '');
+                        $this->updateQueue(3, $class->initialize($this->queue->code)->execute($this->queue->data));
                     } else {
                         throw new \think\admin\Exception("自定义 {$command} 未继承 Queue 或 QueueService");
                     }
@@ -311,7 +297,7 @@ class Queue extends Command
      * @param boolean $isSplit 是否分隔
      * @throws \think\db\exception\DbException
      */
-    protected function updateQueue(int $status, string $message, bool $isSplit = true)
+    protected function updateQueue($status, $message, $isSplit = true)
     {
         // 更新当前任务
         $info = trim(is_string($message) ? $message : '');
