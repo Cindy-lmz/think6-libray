@@ -1,0 +1,13 @@
+{
+    "name": "cindy-lmz/think6-libray",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Cindy-lmz",
+            "email": "1481380328@qq.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
