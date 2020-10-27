@@ -1,7 +1,19 @@
 {
     "name": "cindy-lmz/think6-libray",
+<<<<<<< HEAD
     "description": "thinkphp6 Development Library",
     "type": "project",
+=======
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Cindy-lmz",
+            "email": "1481380328@qq.com"
+        }
+    ],
+    "minimum-stability": "dev",
+>>>>>>> 0931c72b6706e0e3709357f07931438b3dff5880
     "require": {
         "ext-gd": "*",
         "ext-curl": "*",
