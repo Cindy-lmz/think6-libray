@@ -1,6 +1,22 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | ThinkPHP [ WE CAN DO IT JUST THINK ]
+// +----------------------------------------------------------------------
+// | Copyright (c) 2006~2019 http://thinkphp.cn All rights reserved.
+// +----------------------------------------------------------------------
+// | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
+// +----------------------------------------------------------------------
+// | Author: liu21st <liu21st@gmail.com>
+// +----------------------------------------------------------------------
+// 以下代码来自 topthink/think-multi-app，有部分修改以兼容 ThinkAdmin 的需求
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
+
 namespace think\admin\multiple;
+
+use think\helper\Str;
 
 /**
  * 多应用URL生成与解析
@@ -38,7 +54,7 @@ class Url extends \think\route\Url
             $action = array_pop($path);
             $controller = empty($path) ? $controller : array_pop($path);
             $app = empty($path) ? $app : array_pop($path);
-            $url = $controller . '/' . $action;
+            $url = Str::snake($controller) . '/' . $action;
             $bind = $this->app->config->get('app.domain_bind', []);
             if ($key = array_search($app, $bind)) {
                 isset($bind[$_SERVER['SERVER_NAME']]) && $domain = $_SERVER['SERVER_NAME'];
@@ -57,12 +73,11 @@ class Url extends \think\route\Url
 
     public function build()
     {
-        // 解析URL
         $url = $this->url;
-        $suffix = $this->suffix;
-        $domain = $this->domain;
-        $request = $this->app->request;
         $vars = $this->vars;
+        $domain = $this->domain;
+        $suffix = $this->suffix;
+        $request = $this->app->request;
         if (0 === strpos($url, '[') && $pos = strpos($url, ']')) {
             // [name] 表示使用路由命名标识生成URL
             $name = substr($url, 1, $pos - 1);
@@ -76,15 +91,15 @@ class Url extends \think\route\Url
                 $anchor = $info['fragment'];
                 if (false !== strpos($anchor, '?')) {
                     // 解析参数
-                    list($anchor, $info['query']) = explode('?', $anchor, 2);
+                    [$anchor, $info['query']] = explode('?', $anchor, 2);
                 }
                 if (false !== strpos($anchor, '@')) {
                     // 解析域名
-                    list($anchor, $domain) = explode('@', $anchor, 2);
+                    [$anchor, $domain] = explode('@', $anchor, 2);
                 }
             } elseif (strpos($url, '@') && false === strpos($url, '\\')) {
                 // 解析域名
-                list($url, $domain) = explode('@', $url, 2);
+                [$url, $domain] = explode('@', $url, 2);
             }
         }
         if ($url) {

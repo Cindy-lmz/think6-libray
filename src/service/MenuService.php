@@ -1,5 +1,19 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
+// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
 
 namespace think\admin\service;
 
@@ -19,7 +33,7 @@ class MenuService extends Service
      * @return array
      * @throws \ReflectionException
      */
-    public function getList()
+    public function getList(): array
     {
         static $nodes = [];
         if (count($nodes) > 0) return $nodes;
@@ -37,32 +51,42 @@ class MenuService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getTree()
+    public function getTree(): array
     {
-        $result = $this->app->db->name('SystemMenu')->where(['status' => '1'])->order('sort desc,id asc')->select();
-        return $this->buildData(DataExtend::arr2tree($result->toArray()), NodeService::instance()->getMethods());
+        $query = $this->app->db->name('SystemMenu');
+        $query->where(['status' => '1'])->order('sort desc,id asc');
+        return $this->_buildData(DataExtend::arr2tree($query->select()->toArray()));
     }
 
     /**
      * 后台主菜单权限过滤
      * @param array $menus 当前菜单列表
-     * @param array $nodes 系统权限节点
      * @return array
      * @throws \ReflectionException
      */
-    private function buildData($menus, $nodes)
+    private function _buildData(array $menus): array
     {
+        $service = AdminService::instance();
         foreach ($menus as $key => &$menu) {
             if (!empty($menu['sub'])) {
-                $menu['sub'] = $this->buildData($menu['sub'], $nodes);
+                $menu['sub'] = $this->_buildData($menu['sub']);
             }
-            if (!empty($menu['sub'])) $menu['url'] = '#';
-            elseif ($menu['url'] === '#') unset($menus[$key]);
-            elseif (preg_match('|^https?://|i', $menu['url'])) continue;
-            else {
-                $node = join('/', array_slice(explode('/', preg_replace('/[\W]/', '/', $menu['url'])), 0, 3));
-                $menu['url'] = url($menu['url']) . (empty($menu['params']) ? '' : "?{$menu['params']}");
-                if (!AdminService::instance()->check($node)) unset($menus[$key]);
+            if (!empty($menu['sub'])) {
+                $menu['url'] = '#';
+            } elseif ($menu['url'] === '#') {
+                unset($menus[$key]);
+            } elseif (preg_match('|^https?://|i', $menu['url'])) {
+                if (!!$menu['node'] && !$service->check($menu['node'])) {
+                    unset($menus[$key]);
+                } elseif ($menu['params']) {
+                    $menu['url'] .= (strpos($menu['url'], '?') === false ? '?' : '&') . $menu['params'];
+                }
+            } elseif (!!$menu['node'] && !$service->check($menu['node'])) {
+                unset($menus[$key]);
+            } else {
+                $node = join('/', array_slice(explode('/', $menu['url']), 0, 3));
+                $menu['url'] = url($menu['url'])->build() . ($menu['params'] ? '?' . $menu['params'] : '');
+                if (!$service->check($node)) unset($menus[$key]);
             }
         }
         return $menus;
