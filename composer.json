@@ -1,19 +1,14 @@
 {
-    "name": "cindy-lmz/think6-libray",
-<<<<<<< HEAD
-    "description": "thinkphp6 Development Library",
-    "type": "project",
-=======
     "type": "library",
+    "name": "cindy-lmz/think6-libray",
+    "description": "thinkphp6 Development Library",
     "license": "MIT",
     "authors": [
         {
-            "name": "Cindy-lmz",
-            "email": "1481380328@qq.com"
+            "name": "cindy",
+            "email": "cindyli@topichina.com.cn"
         }
     ],
-    "minimum-stability": "dev",
->>>>>>> 0931c72b6706e0e3709357f07931438b3dff5880
     "require": {
         "ext-gd": "*",
         "ext-curl": "*",
@@ -22,13 +17,6 @@
         "ext-mbstring": "*",
         "topthink/framework": "^6.0"
     },
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "cindy",
-            "email": "cindyli@topichina.com.cn"
-        }
-    ],
     "autoload": {
       "files": [
         "src/common.php"
@@ -44,5 +32,4 @@
       ]
     }
   },
-    "minimum-stability": "dev"
 }
