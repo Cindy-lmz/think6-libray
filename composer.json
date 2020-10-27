@@ -2,7 +2,6 @@
     "name": "cindy-lmz/think6-libray",
     "description": "thinkphp6 Development Library",
     "type": "project",
-    "minimum-stability": "dev",
     "require": {
         "ext-gd": "*",
         "ext-curl": "*",
@@ -32,6 +31,6 @@
         "think\\admin\\Library"
       ]
     }
-  }
-    
+  },
+    "minimum-stability": "dev"
 }
