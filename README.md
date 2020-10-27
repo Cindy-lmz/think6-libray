@@ -210,6 +210,3 @@ $string = encode($content);
 $content = decode($string);
 ```
 
-## 赞助打赏
-
-![赞助](http://static.thinkadmin.top/pay.png)
