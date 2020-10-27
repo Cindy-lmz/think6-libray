@@ -26,10 +26,10 @@
       }
     },
     "extra": {
-    "think": {
-      "services": [
-        "think\\admin\\Library"
-      ]
-    }
-  },
+      "think": {
+        "services": [
+          "think\\admin\\Library"
+        ]
+      }
+  }
 }
