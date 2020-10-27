@@ -9,5 +9,27 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {}
+    "require": {
+        "ext-gd": "*",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-iconv": "*",
+        "ext-mbstring": "*",
+        "topthink/framework": "^6.0"
+    },
+    "autoload": {
+    "files": [
+      "src/common.php"
+    ],
+    "psr-4": {
+      "think\\admin\\": "src"
+    }
+  },
+  "extra": {
+    "think": {
+      "services": [
+        "think\\admin\\Library"
+      ]
+    }
+  }
 }
