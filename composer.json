@@ -8,6 +8,7 @@
             "email": "1481380328@qq.com"
         }
     ],
+    "minimum-stability": "dev"
     "require": {
         "ext-gd": "*",
         "ext-curl": "*",
