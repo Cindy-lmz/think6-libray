@@ -84,32 +84,32 @@ abstract class Controller extends \stdClass
 
     /**
      * 返回失败的操作
-     * @param mixed $info 消息内容
+     * @param mixed $msg 消息内容
      * @param mixed $data 返回数据
      * @param integer $code 返回代码
      */
-    public function error($info, $data = '{-null-}', $code = 0): void
+    public function error($msg, $data = '{-null-}', $code = 1003): void
     {
         if ($data === '{-null-}') $data = new \stdClass();
         throw new HttpResponseException(json([
-            'code' => $code, 'msg' => $info, 'data' => $data,
+            'code' => $code, 'msg' => $msg, 'data' => $data,
         ]));
     }
 
     /**
      * 返回成功的操作
-     * @param mixed $info 消息内容
+     * @param mixed $msg 消息内容
      * @param mixed $data 返回数据
      * @param integer $code 返回代码
      */
-    public function success($info, $data = '{-null-}', $code = 200): void
+    public function success($msg, $data = '{-null-}', $code = 200): void
     {
         if ($this->csrf_state) {
             TokenHelper::instance()->clear();
         }
         if ($data === '{-null-}') $data = new \stdClass();
         throw new HttpResponseException(json([
-            'code' => $code, 'msg' => $info, 'data' => $data,
+            'code' => $code, 'msg' => $msg, 'data' => $data,
         ]));
     }
 
