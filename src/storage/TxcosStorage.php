@@ -1,18 +1,5 @@
 <?php
 
-// +----------------------------------------------------------------------
-// | Library for ThinkAdmin
-// +----------------------------------------------------------------------
-// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
-// +----------------------------------------------------------------------
-// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-// | 开源协议 ( https://mit-license.org )
-// +----------------------------------------------------------------------
-// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
-// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
-// +----------------------------------------------------------------------
-
 declare (strict_types=1);
 
 namespace think\admin\storage;
@@ -21,11 +8,11 @@ use think\admin\extend\HttpExtend;
 use think\admin\Storage;
 
 /**
- * 阿里云OSS存储支持
- * Class AliossStorage
+ * 腾讯云COS存储支持
+ * Class TxcosStorage
  * @package think\admin\storage
  */
-class AliossStorage extends Storage
+class TxcosStorage extends Storage
 {
     /**
      * 数据中心
@@ -40,13 +27,13 @@ class AliossStorage extends Storage
     private $bucket;
 
     /**
-     * AccessId
+     * $secretId
      * @var string
      */
-    private $accessKey;
+    private $secretId;
 
     /**
-     * AccessSecret
+     * secretKey
      * @var string
      */
     private $secretKey;
@@ -61,17 +48,17 @@ class AliossStorage extends Storage
     protected function initialize()
     {
         // 读取配置文件
-        $this->point = sysconf('storage.alioss_point');
-        $this->bucket = sysconf('storage.alioss_bucket');
-        $this->accessKey = sysconf('storage.alioss_access_key');
-        $this->secretKey = sysconf('storage.alioss_secret_key');
+        $this->point = sysconf('storage.txcos_point');
+        $this->bucket = sysconf('storage.txcos_bucket');
+        $this->secretId = sysconf('storage.txcos_access_key');
+        $this->secretKey = sysconf('storage.txcos_secret_key');
         // 计算链接前缀
-        $type = strtolower(sysconf('storage.alioss_http_protocol'));
-        $domain = strtolower(sysconf('storage.alioss_http_domain'));
+        $type = strtolower(sysconf('storage.txcos_http_protocol'));
+        $domain = strtolower(sysconf('storage.txcos_http_domain'));
         if ($type === 'auto') $this->prefix = "//{$domain}";
         elseif ($type === 'http') $this->prefix = "http://{$domain}";
         elseif ($type === 'https') $this->prefix = "https://{$domain}";
-        else throw new \think\admin\Exception('未配置阿里云URL域名哦');
+        else throw new \think\admin\Exception('未配置腾讯云COS访问域名哦');
     }
 
     /**
@@ -85,7 +72,7 @@ class AliossStorage extends Storage
      */
     public static function instance(?string $name = null)
     {
-        return parent::instance('alioss');
+        return parent::instance('txcos');
     }
 
     /**
@@ -98,15 +85,11 @@ class AliossStorage extends Storage
      */
     public function set(string $name, string $file, bool $safe = false, ?string $attname = null)
     {
-        $token = $this->buildUploadToken($name);
-        $data = ['key' => $name];
-        $data['policy'] = $token['policy'];
-        $data['Signature'] = $token['signature'];
-        $data['OSSAccessKeyId'] = $this->accessKey;
-        $data['success_action_status'] = '200';
+        $data = $this->buildUploadToken($name) + ['key' => $name];
         if (is_string($attname) && strlen($attname) > 0) {
-            $data['Content-Disposition'] = 'inline;filename=' . urlencode($attname);
+            $data['Content-Disposition'] = '' . urlencode($attname);
         }
+        $data['success_action_status'] = '200';
         $file = ['field' => 'file', 'name' => $name, 'content' => $file];
         if (is_numeric(stripos(HttpExtend::submit($this->upload(), $data, $file), '200 OK'))) {
             return ['file' => $this->path($name, $safe), 'url' => $this->url($name, $safe, $attname), 'key' => $name];
@@ -151,7 +134,7 @@ class AliossStorage extends Storage
     {
         $file = $this->delSuffix($name);
         $result = HttpExtend::request('HEAD', "http://{$this->bucket}.{$this->point}/{$file}", [
-            'returnHeader' => true, 'headers' => $this->headerSign('HEAD', $file),
+            'returnHeader' => true, 'headers' => $this->headerSign('HEAD', $name),
         ]);
         return is_numeric(stripos($result, 'HTTP/1.1 200 OK'));
     }
@@ -213,16 +196,19 @@ class AliossStorage extends Storage
      */
     public function buildUploadToken(string $name, int $expires = 3600, ?string $attname = null): array
     {
-        $data = [
-            'policy'  => base64_encode(json_encode([
-                'conditions' => [['content-length-range', 0, 1048576000]],
-                'expiration' => date('Y-m-d\TH:i:s.000\Z', time() + $expires),
-            ])),
-            'keyid'   => $this->accessKey,
-            'siteurl' => $this->url($name, false, $attname),
+        $startTimestamp = time();
+        $endTimestamp = $startTimestamp + $expires;
+        $keyTime = "{$startTimestamp};{$endTimestamp}";
+        $siteurl = $this->url($name, false, $attname);
+        $policy = json_encode([
+            'expiration' => date('Y-m-d\TH:i:s.000\Z', $endTimestamp),
+            'conditions' => [['q-ak' => $this->secretId], ['q-sign-time' => $keyTime], ['q-sign-algorithm' => 'sha1']],
+        ]);
+        return [
+            'policy'  => base64_encode($policy), 'q-ak' => $this->secretId,
+            'siteurl' => $siteurl, 'q-key-time' => $keyTime, 'q-sign-algorithm' => 'sha1',
+            // 'q-signature' => hash_hmac('sha1', sha1($policy), hash_hmac('sha1', $keyTime, $this->secretKey)),
         ];
-        $data['signature'] = base64_encode(hash_hmac('sha1', $data['policy'], $this->secretKey, true));
-        return $data;
     }
 
     /**
@@ -234,52 +220,77 @@ class AliossStorage extends Storage
      */
     private function headerSign(string $method, string $soruce, array $header = []): array
     {
-        if (empty($header['Date'])) $header['Date'] = gmdate('D, d M Y H:i:s \G\M\T');
-        if (empty($header['Content-Type'])) $header['Content-Type'] = 'application/xml';
-        uksort($header, 'strnatcasecmp');
-        $content = "{$method}\n\n";
-        foreach ($header as $key => $value) {
-            $value = str_replace(["\r", "\n"], '', $value);
-            if (in_array(strtolower($key), ['content-md5', 'content-type', 'date'])) {
-                $content .= "{$value}\n";
-            } elseif (stripos($key, 'x-oss-') === 0) {
-                $content .= strtolower($key) . ":{$value}\n";
-            }
+        // 1.生成 KeyTime
+        $startTimestamp = time();
+        $endTimestamp = $startTimestamp + 3600;
+        $keyTime = "{$startTimestamp};{$endTimestamp}";
+        // 2.生成 SignKey
+        $signKey = hash_hmac('sha1', $keyTime, $this->secretKey);
+        // 3.生成 UrlParamList, HttpParameters
+        [$parse_url, $urlParamList, $httpParameters] = [parse_url($soruce), '', ''];
+        if (!empty($parse_url['query'])) {
+            parse_str($parse_url['query'], $params);
+            uksort($params, 'strnatcasecmp');
+            $urlParamList = join(';', array_keys($params));
+            $httpParameters = http_build_query($params);
         }
-        $content = rawurldecode($content) . "/{$this->bucket}/{$soruce}";
-        $signature = base64_encode(hash_hmac('sha1', $content, $this->secretKey, true));
-        $header['Authorization'] = "OSS {$this->accessKey}:{$signature}";
-        foreach ($header as $key => $value) $header[$key] = "{$key}: {$value}";
+        // 4.生成 HeaderList, HttpHeaders
+        [$headerList, $httpHeaders] = ['', ''];
+        if (!empty($header)) {
+            uksort($header, 'strnatcasecmp');
+            $headerList = join(';', array_keys($header));
+            $httpHeaders = http_build_query($header);
+        }
+        // 5.生成 HttpString
+        $httpString = strtolower($method) . "\n/{$parse_url['path']}\n{$httpParameters}\n{$httpHeaders}\n";
+        // 6.生成 StringToSign
+        $httpStringSha1 = sha1($httpString);
+        $stringToSign = "sha1\n{$keyTime}\n{$httpStringSha1}\n";
+        // 7.生成 Signature
+        $signature = hash_hmac('sha1', $stringToSign, $signKey);
+        // 8.生成签名
+        $signArray = [
+            'q-sign-algorithm' => 'sha1',
+            'q-ak'             => $this->secretId,
+            'q-sign-time'      => $keyTime,
+            'q-key-time'       => $keyTime,
+            'q-header-list'    => $headerList,
+            'q-url-param-list' => $urlParamList,
+            'q-signature'      => $signature,
+        ];
+        $header['Authorization'] = urldecode(http_build_query($signArray));
+        foreach ($header as $key => $value) $header[$key] = ucfirst($key) . ": {$value}";
         return array_values($header);
     }
 
     /**
-     * 阿里云OSS存储区域
+     * 腾讯云COS存储区域
      * @return array
      */
     public static function region()
     {
         return [
-            'oss-cn-hangzhou.aliyuncs.com'    => '华东 1（杭州）',
-            'oss-cn-shanghai.aliyuncs.com'    => '华东 2（上海）',
-            'oss-cn-qingdao.aliyuncs.com'     => '华北 1（青岛）',
-            'oss-cn-beijing.aliyuncs.com'     => '华北 2（北京）',
-            'oss-cn-zhangjiakou.aliyuncs.com' => '华北 3（张家口）',
-            'oss-cn-huhehaote.aliyuncs.com'   => '华北 5（呼和浩特）',
-            'oss-cn-shenzhen.aliyuncs.com'    => '华南 1（深圳）',
-            'oss-cn-chengdu.aliyuncs.com'     => '西南 1（成都）',
-            'oss-cn-hongkong.aliyuncs.com'    => '中国（香港）',
-            'oss-us-west-1.aliyuncs.com'      => '美国西部 1（硅谷）',
-            'oss-us-east-1.aliyuncs.com'      => '美国东部 1（弗吉尼亚）',
-            'oss-ap-southeast-1.aliyuncs.com' => '亚太东南 1（新加坡）',
-            'oss-ap-southeast-2.aliyuncs.com' => '亚太东南 2（悉尼）',
-            'oss-ap-southeast-3.aliyuncs.com' => '亚太东南 3（吉隆坡）',
-            'oss-ap-southeast-5.aliyuncs.com' => '亚太东南 5（雅加达）',
-            'oss-ap-northeast-1.aliyuncs.com' => '亚太东北 1（日本）',
-            'oss-ap-south-1.aliyuncs.com'     => '亚太南部 1（孟买）',
-            'oss-eu-central-1.aliyuncs.com'   => '欧洲中部 1（法兰克福）',
-            'oss-eu-west-1.aliyuncs.com'      => '英国（伦敦）',
-            'oss-me-east-1.aliyuncs.com'      => '中东东部 1（迪拜）',
+            'cos.ap-beijing-1.myqcloud.com'     => '中国大陆 公有云地域 北京一区（已售罄）',
+            'cos.ap-beijing.myqcloud.com'       => '中国大陆 公有云地域 北京',
+            'cos.ap-nanjing.myqcloud.com'       => '中国大陆 公有云地域 南京',
+            'cos.ap-shanghai.myqcloud.com'      => '中国大陆 公有云地域 上海',
+            'cos.ap-guangzhou.myqcloud.com'     => '中国大陆 公有云地域 广州',
+            'cos.ap-chengdu.myqcloud.com'       => '中国大陆 公有云地域 成都',
+            'cos.ap-chongqing.myqcloud.com'     => '中国大陆 公有云地域 重庆',
+            'cos.ap-shenzhen-fsi.myqcloud.com'  => '中国大陆 金融云地域 深圳金融',
+            'cos.ap-shanghai-fsi.myqcloud.com'  => '中国大陆 金融云地域 上海金融',
+            'cos.ap-beijing-fsi.myqcloud.com'   => '中国大陆 金融云地域 北京金融',
+            'cos.ap-hongkong.myqcloud.com'      => '亚太地区 公有云地域 中国香港',
+            'cos.ap-singapore.myqcloud.com'     => '亚太地区 公有云地域 新加坡',
+            'cos.ap-mumbai.myqcloud.com'        => '亚太地区 公有云地域 孟买',
+            'cos.ap-seoul.myqcloud.com'         => '亚太地区 公有云地域 首尔',
+            'cos.ap-bangkok.myqcloud.com'       => '亚太地区 公有云地域 曼谷',
+            'cos.ap-tokyo.myqcloud.com'         => '亚太地区 公有云地域 东京',
+            'cos.na-siliconvalley.myqcloud.com' => '北美地区 公有云地域 硅谷',
+            'cos.na-ashburn.myqcloud.com'       => '北美地区 公有云地域 弗吉尼亚',
+            'cos.na-toronto.myqcloud.com'       => '北美地区 公有云地域 多伦多',
+            'cos.eu-frankfurt.myqcloud.com'     => '欧洲地区 公有云地域 法兰克福',
+            'cos.eu-moscow.myqcloud.com'        => '欧洲地区 公有云地域 莫斯科	',
         ];
     }
 

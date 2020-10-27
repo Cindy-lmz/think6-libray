@@ -1,5 +1,19 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
+// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
 
 namespace think\admin\service;
 
@@ -18,7 +32,7 @@ class AdminService extends Service
      * 是否已经登录
      * @return boolean
      */
-    public function isLogin()
+    public function isLogin(): bool
     {
         return $this->getUserId() > 0;
     }
@@ -27,7 +41,7 @@ class AdminService extends Service
      * 是否为超级用户
      * @return boolean
      */
-    public function isSuper()
+    public function isSuper(): bool
     {
         return $this->getUserName() === 'admin';
     }
@@ -36,7 +50,7 @@ class AdminService extends Service
      * 获取后台用户ID
      * @return integer
      */
-    public function getUserId()
+    public function getUserId(): int
     {
         return intval($this->app->session->get('user.id', 0));
     }
@@ -45,7 +59,7 @@ class AdminService extends Service
      * 获取后台用户名称
      * @return string
      */
-    public function getUserName()
+    public function getUserName(): string
     {
         return $this->app->session->get('user.username', '');
     }
@@ -53,17 +67,22 @@ class AdminService extends Service
     /**
      * 检查指定节点授权
      * --- 需要读取缓存或扫描所有节点
-     * @param string $node
+     * @param null|string $node
      * @return boolean
      * @throws \ReflectionException
      */
-    public function check($node = '')
+    public function check(?string $node = ''): bool
     {
         if ($this->isSuper()) return true;
         $service = NodeService::instance();
         [$real, $nodes] = [$service->fullnode($node), $service->getMethods()];
-        foreach ($nodes as $key => $rule) if (stripos($key, '_') !== false) {
-            $nodes[str_replace('_', '', $key)] = $rule;
+        // 以下代码为兼容 win 控制器不区分大小写的验证问题
+        foreach ($nodes as $key => $rule) {
+            if (strpos($key, '_') !== false && strpos($key, '/') !== false) {
+                $attr = explode('/', $key);
+                $attr[1] = strtr($attr[1], ['_' => '']);
+                $nodes[join('/', $attr)] = $rule;
+            }
         }
         if (!empty($nodes[$real]['isauth'])) {
             return in_array($real, $this->app->session->get('user.nodes', []));
@@ -78,7 +97,7 @@ class AdminService extends Service
      * @return array
      * @throws \ReflectionException
      */
-    public function getTree($checkeds = [])
+    public function getTree(array $checkeds = []): array
     {
         [$nodes, $pnodes, $methods] = [[], [], array_reverse(NodeService::instance()->getMethods())];
         foreach ($methods as $node => $method) {
@@ -90,7 +109,7 @@ class AdminService extends Service
                 $nodes[$node] = ['node' => $node, 'title' => $method['title'], 'pnode' => $pnode, 'checked' => in_array($node, $checkeds)];
             }
         }
-        foreach (array_keys($nodes) as $key) foreach ($methods as $node => $method) if (stripos($key, "{$node}/") !== false) {
+        foreach (array_keys($nodes) as $key) foreach ($methods as $node => $method) if (stripos($key, $node . '/') !== false) {
             $pnode = substr($node, 0, strripos($node, '/'));
             $nodes[$node] = ['node' => $node, 'title' => $method['title'], 'pnode' => $pnode, 'checked' => in_array($node, $checkeds)];
             $nodes[$pnode] = ['node' => $pnode, 'title' => ucfirst($pnode), 'pnode' => '', 'checked' => in_array($pnode, $checkeds)];
@@ -106,7 +125,7 @@ class AdminService extends Service
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function apply($force = false)
+    public function apply(bool $force = false)
     {
         if ($force) $this->clearCache();
         if (($uid = $this->app->session->get('user.id'))) {
@@ -130,6 +149,7 @@ class AdminService extends Service
      */
     public function clearCache()
     {
+        TokenService::instance()->clearCache();
         $this->app->cache->delete('SystemAuthNode');
         return $this;
     }

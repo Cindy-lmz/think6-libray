@@ -1,5 +1,18 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
+// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
 namespace think\admin;
 
 use think\admin\command\Database;
@@ -26,15 +39,24 @@ use function Composer\Autoload\includeFile;
 class Library extends Service
 {
     /**
+     * 扩展库版本号
+     */
+    const VERSION = '6.0.18';
+
+    /**
      * 启动服务
      */
     public function boot()
     {
-        // 多应用中间键
-        $this->app->event->listen('HttpRun', function () {
+        // 多应用中间键处理
+        $this->app->event->listen('HttpRun', function (Request $request) {
             $this->app->middleware->add(App::class);
+            // 解决 HTTP 调用 Console 之后 URL 问题
+            if (!$this->app->request->isCli()) {
+                $request->setHost($request->host());
+            }
         });
-        // 替换 ThinkPHP 地址处理
+        // 替换 ThinkPHP 地址
         $this->app->bind('think\route\Url', Url::class);
         // 替换 ThinkPHP 指令
         $this->commands(['build' => Build::class, 'clear' => Clear::class]);

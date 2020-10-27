@@ -1,5 +1,20 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 代码仓库：https://gitee.com/zoujingli/ThinkLibrary
+// | github 代码仓库：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
+
 namespace think\admin\extend;
 
 /**
@@ -18,9 +33,9 @@ class DataExtend
      * @param string $sub 子数组名称
      * @return array
      */
-    public static function arr2tree($list, $cid = 'id', $pid = 'pid', $sub = 'sub')
+    public static function arr2tree(array $list, string $cid = 'id', string $pid = 'pid', string $sub = 'sub'): array
     {
-        list($tree, $tmp) = [[], array_combine(array_column($list, $cid), array_values($list))];
+        [$tree, $tmp] = [[], array_combine(array_column($list, $cid), array_values($list))];
         foreach ($list as $vo) isset($vo[$pid]) && isset($tmp[$vo[$pid]]) ? $tmp[$vo[$pid]][$sub][] = &$tmp[$vo[$cid]] : $tree[] = &$tmp[$vo[$cid]];
         unset($tmp, $list);
         return $tree;
@@ -35,12 +50,13 @@ class DataExtend
      * @param string $ppath 上级 PATH
      * @return array
      */
-    public static function arr2table(array $list, $cid = 'id', $pid = 'pid', $cpath = 'path', $ppath = '')
+    public static function arr2table(array $list, string $cid = 'id', string $pid = 'pid', string $cpath = 'path', string $ppath = ''): array
     {
         $tree = [];
         foreach (static::arr2tree($list, $cid, $pid) as $attr) {
             $attr[$cpath] = "{$ppath}-{$attr[$cid]}";
             $attr['sub'] = $attr['sub'] ?? [];
+            $attr['spc'] = count($attr['sub']);
             $attr['spt'] = substr_count($ppath, '-');
             $attr['spl'] = str_repeat("　├　", $attr['spt']);
             $sub = $attr['sub'];
@@ -52,18 +68,18 @@ class DataExtend
     }
 
     /**
-     * 获取数据树子ID
+     * 获取数据树子ID集合
      * @param array $list 数据列表
-     * @param integer $id 起始ID
-     * @param string $key ID_KEY
-     * @param string $pkey PID_KEY
+     * @param mixed $value 起始有效ID值
+     * @param string $ckey 当前主键ID名称
+     * @param string $pkey 上级主键ID名称
      * @return array
      */
-    public static function getArrSubIds($list, $id = 0, $key = 'id', $pkey = 'pid')
+    public static function getArrSubIds(array $list, $value = 0, string $ckey = 'id', string $pkey = 'pid'): array
     {
-        $ids = [intval($id)];
-        foreach ($list as $vo) if (intval($vo[$pkey]) > 0 && intval($vo[$pkey]) === intval($id)) {
-            $ids = array_merge($ids, static::getArrSubIds($list, intval($vo[$key]), $key, $pkey));
+        $ids = [intval($value)];
+        foreach ($list as $vo) if (intval($vo[$pkey]) > 0 && intval($vo[$pkey]) === intval($value)) {
+            $ids = array_merge($ids, static::getArrSubIds($list, intval($vo[$ckey]), $ckey, $pkey));
         }
         return $ids;
     }

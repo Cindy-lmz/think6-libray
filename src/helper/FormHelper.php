@@ -1,5 +1,20 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | Library for ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
+// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
+
 namespace think\admin\helper;
 
 use think\admin\Helper;
@@ -12,35 +27,6 @@ use think\db\Query;
  */
 class FormHelper extends Helper
 {
-    /**
-     * 表单扩展数据
-     * @var array
-     */
-    protected $data;
-
-    /**
-     * 表单额外更新条件
-     * @var array
-     */
-    protected $where;
-
-    /**
-     * 数据对象主键名称
-     * @var string
-     */
-    protected $field;
-
-    /**
-     * 数据对象主键值
-     * @var string
-     */
-    protected $value;
-
-    /**
-     * 表单模板文件
-     * @var string
-     */
-    protected $template;
 
     /**
      * 逻辑器初始化
@@ -49,39 +35,36 @@ class FormHelper extends Helper
      * @param string $field 指定数据主键
      * @param array $where 额外更新条件
      * @param array $data 表单扩展数据
-     * @return array|boolean|mixed
+     * @return array|boolean|mixed|void
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function init($dbQuery, $template = '', $field = '', $where = [], $data = [])
+    public function init($dbQuery, string $template = '', string $field = '', array $where = [], array $data = [])
     {
-        $this->query = $this->buildQuery($dbQuery);
-        list($this->template, $this->where, $this->data) = [$template, $where, $data];
-        $this->field = $field ?: ($this->query->getPk() ?: 'id');
-        $this->value = input($this->field, $data[$this->field] ?? null);
-        // GET请求, 获取数据并显示表单页面
+        $query = $this->buildQuery($dbQuery);
+        $field = $field ?: ($query->getPk() ?: 'id');
+        $value = input($field, $data[$field] ?? null);
         if ($this->app->request->isGet()) {
-            if ($this->value !== null) {
-                $where = [$this->field => $this->value];
-                $data = (array)$this->query->where($where)->where($this->where)->find();
+            if ($value !== null) {
+                $find = $query->where([$field => $value])->where($where)->find();
+                if (!empty($find) && is_array($find)) $data = array_merge($data, $find);
             }
-            $data = array_merge($data, $this->data);
-            if (false !== $this->controller->callback('_form_filter', $data)) {
-                return $this->controller->fetch($this->template, ['vo' => $data]);
+            if (false !== $this->class->callback('_form_filter', $data)) {
+                // $this->class->fetch($template, ['vo' => $data]);
+                $this->class->success($template,['vo' => $data],200);
+            } else {
+                return $data;
             }
-            return $data;
-        }
-        // POST请求, 数据自动存库处理
-        if ($this->app->request->isPost()) {
-            $data = array_merge($this->app->request->post(), $this->data);
-            if (false !== $this->controller->callback('_form_filter', $data, $this->where)) {
-                $result = data_save($this->query, $data, $this->field, $this->where);
-                if (false !== $this->controller->callback('_form_result', $result, $data)) {
+        } elseif ($this->app->request->isPost()) {
+            $data = array_merge($this->app->request->post(), $data);
+            if (false !== $this->class->callback('_form_filter', $data, $where)) {
+                $result = data_save($query, $data, $field, $where) !== false;
+                if (false !== $this->class->callback('_form_result', $result, $data)) {
                     if ($result !== false) {
-                        $this->controller->success(lang('think_library_form_success'));
+                        $this->class->success(lang('think_library_form_success'));
                     } else {
-                        $this->controller->error(lang('think_library_form_error'));
+                        $this->class->error(lang('think_library_form_error'));
                     }
                 }
                 return $result;

@@ -1,5 +1,20 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | Library for ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
+// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
+
 namespace think\admin\command;
 
 use think\admin\Command;
@@ -26,11 +41,14 @@ class Database extends Command
      * @param Output $output
      * @return mixed
      */
-    public function execute(Input $input, Output $output)
+    public function execute(Input $input, Output $output): void
     {
-        $do = $input->getArgument('action');
-        if (in_array($do, ['repair', 'optimize'])) return $this->{"_{$do}"}();
-        $this->output->error("Wrong operation, currently allow repair|optimize");
+        $method = $input->getArgument('action');
+        if (in_array($method, ['repair', 'optimize'])) {
+            $this->{"_{$method}"}();
+        } else {
+            $this->output->error("Wrong operation, currently allow repair|optimize");
+        }
     }
 
     /**
@@ -40,16 +58,16 @@ class Database extends Command
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    protected function _repair()
+    protected function _repair(): void
     {
         $this->setQueueProgress("正在获取需要修复的数据表", 0);
         [$total, $used] = [count($tables = $this->getTables()), 0];
         $this->setQueueProgress("总共需要修复 {$total} 张数据表", 0);
         foreach ($tables as $table) {
-            $stridx = str_pad(++$used, strlen("{$total}"), '0', STR_PAD_LEFT) . "/{$total}";
-            $this->setQueueProgress("[{$stridx}] 正在修复数据表 {$table}", $used / $total * 100);
+            $this->queue->message($total, ++$used, "正在修复数据表 {$table}");
             $this->app->db->query("REPAIR TABLE `{$table}`");
         }
+        $this->queue->success("已完成对 {$total} 张数据表修复操作");
     }
 
     /**
@@ -59,23 +77,23 @@ class Database extends Command
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    protected function _optimize()
+    protected function _optimize(): void
     {
         $this->setQueueProgress("正在获取需要优化的数据表", 0);
         [$total, $used] = [count($tables = $this->getTables()), 0];
         $this->setQueueProgress("总共需要优化 {$total} 张数据表", 0);
         foreach ($tables as $table) {
-            $stridx = str_pad(++$used, strlen("{$total}"), '0', STR_PAD_LEFT) . "/{$total}";
-            $this->setQueueProgress("[{$stridx}] 正在优化数据表 {$table}", $used / $total * 100);
+            $this->queue->message($total, ++$used, "正在优化数据表 {$table}");
             $this->app->db->query("OPTIMIZE TABLE `{$table}`");
         }
+        $this->queue->success("已完成对 {$total} 张数据表优化操作");
     }
 
     /**
      * 获取数据库的数据表
      * @return array
      */
-    protected function getTables()
+    protected function getTables(): array
     {
         $tables = [];
         foreach ($this->app->db->query("show tables") as $item) {

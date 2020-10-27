@@ -1,5 +1,20 @@
 <?php
 
+// +----------------------------------------------------------------------
+// | Library for ThinkAdmin
+// +----------------------------------------------------------------------
+// | 版权所有 2014~2020 广州楚才信息科技有限公司 [ http://www.cuci.cc ]
+// +----------------------------------------------------------------------
+// | 官方网站: https://gitee.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+// | 开源协议 ( https://mit-license.org )
+// +----------------------------------------------------------------------
+// | gitee 仓库地址 ：https://gitee.com/zoujingli/ThinkLibrary
+// | github 仓库地址 ：https://github.com/zoujingli/ThinkLibrary
+// +----------------------------------------------------------------------
+
+declare (strict_types=1);
+
 namespace think\admin\extend;
 
 use think\App;
@@ -45,11 +60,8 @@ class JsonRpcServer
     public function handle($object)
     {
         // Checks if a JSON-RCP request has been received
-        if ($this->app->request->method() !== "POST" || $this->app->request->contentType() != 'application/json') {
-            echo "<h2>" . get_class($object) . "</h2>";
-            foreach (get_class_methods($object) as $method) {
-                if ($method[0] !== '_') echo "<p>method {$method}()</p>";
-            }
+        if ($this->app->request->method() !== "POST" || $this->app->request->contentType() !== 'application/json') {
+            $this->printMethod($object);
         } else {
             // Reads the input data
             $request = json_decode(file_get_contents('php://input'), true);
@@ -67,12 +79,36 @@ class JsonRpcServer
                     $error = ['code' => '-32601', 'message' => '找不到方法', 'meaning' => '该方法不存在或无效'];
                     $response = ['jsonrpc' => '2.0', 'id' => $request['id'], 'result' => null, 'error' => $error];
                 }
-            } catch (\Exception $e) {
-                $error = ['code' => $e->getCode(), 'message' => $e->getMessage()];
+            } catch (\Exception $exception) {
+                $error = ['code' => $exception->getCode(), 'message' => $exception->getMessage()];
                 $response = ['jsonrpc' => '2.0', 'id' => $request['id'], 'result' => null, 'error' => $error];
             }
             // Output the response
             throw new HttpResponseException(json($response)->contentType('text/javascript'));
+        }
+    }
+
+    /**
+     * 打印输出对象方法
+     * @param mixed $object
+     */
+    protected function printMethod($object)
+    {
+        try {
+            $object = new \ReflectionClass($object);
+            echo "<h2>" . $object->getName() . "</h2><hr>";
+            foreach ($object->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                $params = [];
+                foreach ($method->getParameters() as $parameter) {
+                    $type = $parameter->getType();
+                    $params[] = ($type ? "{$type} $" : '$') . $parameter->getName();
+                }
+                $params = count($params) > 0 ? join(', ', $params) : '';
+                echo '<div style="color:#666">' . nl2br($method->getDocComment() ?: '') . '</div>';
+                echo "<div style='color:#00E'>{$object->getShortName()}::{$method->getName()}({$params})</div><br>";
+            }
+        } catch (\Exception $exception) {
+            echo "<h3>[{$exception->getCode()}] {$exception->getMessage()}</h3>";
         }
     }
 }
