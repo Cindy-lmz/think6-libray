@@ -42,11 +42,12 @@ if (!function_exists('sysuri')) {
      * @param boolean|string $domain 域名
      * @return string
      */
-    function sysuri(string $url = '', array $vars = [], $suffix = true, $domain = false)
+    function sysuri(string $url = '', array $vars = [], $suffix = false, $domain = false)
     {
         return SystemService::instance()->sysuri($url, $vars, $suffix, $domain);
     }
 }
+
 if (!function_exists('sysconf')) {
     /**
      * 获取或配置系统参数

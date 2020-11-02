@@ -22,4 +22,5 @@ return [
     'think_library_params_failed_auth'  => '接口账号认证失败！',
     'think_library_params_failed_time'  => '接口请求时差过大！',
     'think_library_params_failed_sign'  => '接口请求签名验证失败！',
+    'success'=>'成功！',
 ];

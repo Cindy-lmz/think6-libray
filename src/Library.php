@@ -47,7 +47,7 @@ class Library extends Service
         $this->app->bind('think\route\Url', Url::class);
         // 替换 ThinkPHP 指令
         $this->commands(['build' => Build::class, 'clear' => Clear::class]);
-        // 注册 ThinkAdmin 指令
+        // 注册 admin 指令
         $this->commands([Queue::class, Install::class, Version::class, Database::class]);
         // 动态应用运行参数
         SystemService::instance()->bindRuntime();
@@ -92,9 +92,9 @@ class Library extends Service
                 } elseif (AdminService::instance()->check()) {
                     return $next($request)->header($header);
                 } elseif (AdminService::instance()->isLogin()) {
-                    return json(['code' => 0, 'msg' => lang('think_library_not_auth')])->header($header);
+                    return json(['code' => 200, 'msg' => '抱歉，没有访问该操作的权限！'])->header($header);
                 } else {
-                    return json(['code' => 0, 'msg' => lang('think_library_not_login'), 'url' => sysuri('admin/login/index')])->header($header);
+                    return json(['code' => 9999, 'msg' => '抱歉，需要登录获取访问权限！'])->header($header);
                 }
             }, 'route');
         }

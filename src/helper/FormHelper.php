@@ -49,9 +49,9 @@ class FormHelper extends Helper
                 $result = data_save($query, $data, $field, $where) !== false;
                 if (false !== $this->class->callback('_form_result', $result, $data)) {
                     if ($result !== false) {
-                        $this->class->success('成功','');
+                        $this->class->success('恭喜, 数据保存成功！',$result);
                     } else {
-                        $this->class->error('失败','',1010);
+                        $this->class->error('抱歉，数据保存失败, 请稍候再试！','',1010);
                     }
                 }
                 return $result;

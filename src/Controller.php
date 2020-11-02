@@ -20,6 +20,11 @@ use think\db\exception\ModelNotFoundException;
 use think\db\Query;
 use think\exception\HttpResponseException;
 use think\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Csv;
+use PhpOffice\PhpSpreadsheet\Writer\Ods\WriterPart;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * 标准控制器基类
@@ -295,6 +300,49 @@ abstract class Controller extends \stdClass
         } catch (\Exception $exception) {
             $this->error("创建任务失败，{$exception->getMessage()}");
         }
+    }
+
+    /**
+     * @Author   Cindy
+     * @DateTime 2020-10-30T11:11:29+0800
+     * @E-main   [cindyli@topichina.com.cn]
+     * @version  [1.0]
+     * @param    [type]                     $newExcel [内容]
+     * @param    [type]                     $filename [文件名]
+     * @param    [type]                     $format   [后缀]
+     * @return   [type]                               [description]
+     */
+    protected function downloadExcel($newExcel, $filename, $format)
+    {
+        ob_end_clean();//清除缓冲区,避免乱码
+        // $format只能为 Xlsx 或 Xls
+        if ($format == 'Xlsx') {
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        } elseif ($format == 'Xls') {
+            header('Content-Type: application/vnd.ms-excel');
+        }
+
+        header("Content-Disposition: attachment;filename="
+            . $filename . date('Y-m-d') . '.' . strtolower($format));
+        header('Cache-Control: max-age=0');
+
+
+        $objWriter = IOFactory::createWriter($newExcel, $format);
+
+        $objWriter->save('php://output');
+
+        //通过php保存在本地的时候需要用到
+        //$objWriter->save($dir.'/demo.xlsx');
+
+        //以下为需要用到IE时候设置
+        // If you're serving to IE 9, then the following may be needed
+        //header('Cache-Control: max-age=1');
+        // If you're serving to IE over SSL, then the following may be needed
+        //header('Expires: Mon, 26 Jul 1997 05:00:00 GMT'); // Date in the past
+        //header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT'); // always modified
+        //header('Cache-Control: cache, must-revalidate'); // HTTP/1.1
+        //header('Pragma: public'); // HTTP/1.0
+        exit;
     }
 
 }

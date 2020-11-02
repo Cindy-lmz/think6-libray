@@ -48,9 +48,9 @@ class SaveHelper extends Helper
         }
         // 回复前端结果
         if ($result !== false) {
-            $this->class->success(lang('think_library_save_success'), '');
+            $this->class->success('恭喜，数据更新成功！', '');
         } else {
-            $this->class->error(lang('think_library_save_error'));
+            $this->class->error('抱歉，数据更新失败, 请稍候再试！');
         }
     }
 

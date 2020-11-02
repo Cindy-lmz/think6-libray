@@ -38,7 +38,7 @@ class DeleteHelper extends Helper
         }
         // 阻止危险操作
         if (!$query->getOptions('where')) {
-            $this->class->error(lang('think_library_delete_error'));
+            $this->class->error(lang('抱歉，数据删除失败, 请稍候再试！'));
         }
         // 组装执行数据
         $data = [];
@@ -55,9 +55,9 @@ class DeleteHelper extends Helper
         }
         // 回复返回结果
         if ($result !== false) {
-            $this->class->success(lang('think_library_delete_success'), '');
+            $this->class->success(lang('恭喜, 数据删除成功！'), '');
         } else {
-            $this->class->error(lang('think_library_delete_error'));
+            $this->class->error(lang('抱歉，数据删除失败, 请稍候再试！'));
         }
     }
 }
