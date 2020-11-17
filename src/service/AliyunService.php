@@ -182,20 +182,20 @@ class AliyunService extends Service
      * @param    string                     $name     [模板名称]
      * @return   [type]                               [批量发送短信]
      */
-    public function batchSend(array $mobile,array $signname,int $time = 0, string $name, array $content = [], array $smsextendcode = []): array
+    public function batchSend(string $mobile,string $signname,int $time = 0, string $name, string $content = [], string $smsextendcode = []): array
     {
     	$conf = $this->config['actions'][$name];
         $data = [ 
                     'RegionId' => $this->config['region_id'],
-                    'PhoneNumberJson' => json_encode($mobile),
-                    'SignNameJson' => json_encode($signname),
+                    'PhoneNumberJson' => $mobile,
+                    'SignNameJson' =>$signname,
                     'TemplateCode' => $conf['template_id'],
                 ];
         if (!empty($content)) {
-        	$data['SmsUpExtendCodeJson'] = json_encode($smsextendcode);
+        	$data['SmsUpExtendCodeJson'] = $smsextendcode;
         }
         if (!empty($content)) {
-        	$data['TemplateParamJson'] = json_encode($content);
+        	$data['TemplateParamJson'] = $content;
         }
         if ($time > 0) $data['time'] = $time;
         return $this->doRequest('SendBatchSms', $data);
