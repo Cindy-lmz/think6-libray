@@ -182,7 +182,7 @@ class AliyunService extends Service
      * @param    string                     $name     [模板名称]
      * @return   [type]                               [批量发送短信]
      */
-    public function batchSend(string $mobile,string $signname,int $time = 0, string $name, string $content = [], string $smsextendcode = []): array
+    public function batchSend(string $mobile,string $signname,int $time = 0, string $name, string $content = '', string $smsextendcode = ''): array
     {
     	$conf = $this->config['actions'][$name];
         $data = [ 
