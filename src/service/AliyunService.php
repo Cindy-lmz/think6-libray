@@ -69,7 +69,7 @@ class AliyunService extends Service
      * @param    array                      $arguments [description]
      * @return   [type]                                [description]
      */
-    private function doRequest(string $action, array $arguments): array
+    private function doRequest(string $action, array $options): array
     {
     	if ($this->status) {
             $result = AlibabaCloud::rpc()
@@ -79,7 +79,7 @@ class AliyunService extends Service
                 ->method('POST')
                 ->host($this->config['host'])
                 ->options([
-                    'query' => $arguments,
+                    'query' => $options,
                 ])
                 ->request();
             $result = $result->toArray();
@@ -160,13 +160,12 @@ class AliyunService extends Service
     public function timeSend(string $mobile, string $code, int $time = 0, string $name): array
     {
     	$conf = $this->config['actions'][$name];
-    	$content = '您的短信验证码为'.$code.'，请在十分钟内完成操作！';
         $data = [ 
         			'RegionId' => $this->config['region_id'],
                     'PhoneNumbers' => $mobile,
                     'SignName' => $this->config['sign_name'],
                     'TemplateCode' => $conf['template_id'],
-                    'TemplateParam' => json_encode($content),
+                    'TemplateParam' => json_encode(['code'=>$code]),
                 ];
         if ($time > 0) $data['time'] = $time;
         return $this->doRequest('SendSms', $data);
@@ -193,10 +192,10 @@ class AliyunService extends Service
                     'TemplateCode' => $conf['template_id'],
                 ];
         if (!empty($content)) {
-        	$data['SmsUpExtendCodeJson'] = json_encode($smsextendcode)
+        	$data['SmsUpExtendCodeJson'] = json_encode($smsextendcode);
         }
         if (!empty($content)) {
-        	$data['TemplateParamJson'] = json_encode($content)
+        	$data['TemplateParamJson'] = json_encode($content);
         }
         if ($time > 0) $data['time'] = $time;
         return $this->doRequest('SendBatchSms', $data);
