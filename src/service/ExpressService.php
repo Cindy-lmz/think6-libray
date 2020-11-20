@@ -67,14 +67,14 @@ class ExpressService extends Service
                 $state = intval($result['data']['info']['state']);
                 $status = in_array($state, [0, 1, 5]) ? 2 : ($state === 3 ? 3 : 4);
                 foreach ($result['data']['info']['context'] as $vo) {
-                    $list[] = ['time' => date('Y-m-d H:i:s', intval($vo['time'])), 'context' => $vo['desc']];
+                    $list[] = ['time' => format_datetime($vo['time']), 'context' => $vo['desc']];
                 }
-                $result = ['message' => $result['msg'], 'status' => $status, 'express' => $code, 'number' => $number, 'data' => $list];
+                $result = ['message' => $result['msg'], 'status' => 200, 'state'=>$status, 'express' => $code, 'number' => $number, 'data' => $list];
                 $this->app->cache->set($ckey, $result, 10);
                 return $result;
             }
         }
-        return ['message' => '暂无轨迹信息', 'status' => 1, 'express' => $code, 'number' => $number, 'data' => $list];
+        return ['message' => '暂无轨迹信息', 'status' => 500, 'state'=>1, 'express' => $code, 'number' => $number, 'data' => $list];
     }
 
     /**
