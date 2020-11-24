@@ -122,9 +122,11 @@ class AdminService extends Service
                 $where = [['status', '=', '1'], ['id', 'in', explode(',', $aids)]];
                 $subsql = $this->app->db->name('SystemAuth')->field('id')->where($where)->buildSql();
                 $user['nodes'] = array_unique($this->app->db->name('SystemAuthNode')->whereRaw("auth in {$subsql}")->column('node'));
+                $user['roles'] = $user['nodes'];
                 $this->app->session->set('user', $user);
             } else {
                 $user['nodes'] = [];
+                $user['roles'] = $user['nodes'];
                 $this->app->session->set('user', $user);
             }
         }
