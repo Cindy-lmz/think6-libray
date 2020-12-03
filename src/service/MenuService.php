@@ -46,6 +46,21 @@ class MenuService extends Service
     }
 
     /**
+     * 获取系统菜单树数据
+     * @return array
+     * @throws \ReflectionException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function getTreeapi(): array
+    {
+        $query = $this->app->db->name('SystemMenu');
+        $query->where(['status' => '1'])->order('sort desc,id asc');
+        return DataExtend::arr2tree($query->select()->toArray());
+    }
+
+    /**
      * 后台主菜单权限过滤
      * @param array $menus 当前菜单列表
      * @return array
