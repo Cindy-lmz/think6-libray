@@ -57,7 +57,7 @@ class MenuService extends Service
     {
         $query = $this->app->db->name('SystemMenu');
         $query->where(['status' => '1'])->order('sort desc,id asc');
-        return DataExtend::arr2tree($query->select()->toArray());
+        return $this->_buildDataApi(DataExtend::arr2tree($query->select()->toArray()));
     }
 
     /**
@@ -88,6 +88,29 @@ class MenuService extends Service
             } else {
                 $node = join('/', array_slice(explode('/', $menu['url']), 0, 3));
                 $menu['url'] = url($menu['url'])->build() . ($menu['params'] ? '?' . $menu['params'] : '');
+                if (!$service->check($node)) unset($menus[$key]);
+            }
+        }
+        return $menus;
+    }
+
+    /**
+     * 后台主菜单权限过滤
+     * @param array $menus 当前菜单列表
+     * @return array
+     * @throws \ReflectionException
+     */
+    private function _buildDataApi(array $menus): array
+    {
+        $service = AdminService::instance();
+        foreach ($menus as $key => &$menu) {
+            if (!empty($menu['sub'])) {
+                $menu['sub'] = $this->_buildDataApi($menu['sub']);
+            }
+            if (!!$menu['node'] && !$service->check($menu['node'])) {
+                unset($menus[$key]);
+            } else {
+                $node = join('/', array_slice(explode('/', $menu['url']), 0, 3));
                 if (!$service->check($node)) unset($menus[$key]);
             }
         }
