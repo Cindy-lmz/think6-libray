@@ -1,5 +1,7 @@
 <?php
 
+
+
 declare (strict_types=1);
 
 namespace think\admin\extend;
@@ -56,5 +58,31 @@ class CodeExtend
         $code = $prefix . (intval($time[0]) + intval($time[1])) . substr($time, 2) . rand(0, 9);
         while (strlen($code) < $size) $code .= rand(0, 9);
         return $code;
+    }
+
+    /**
+     * 抽奖
+     * @Author Cindy
+     * @E-main cindyli@topichina.com.cn
+     * @param  [type]                   $proArr [description]
+     * @param  [type]                   $key    [概率字段]
+     * @return [type]                           [description]
+     */
+     public static function get_rand($proArr,string $key) :array
+     {    
+        $num = count($proArr);
+        for($i = 0; $i < $num; $i++) { 
+            $arr[$i] = $i == 0 ? $proArr[$i][$key] : $proArr[$i][$key] + $arr[$i-1]; 
+        } 
+        $proSum = $arr[$num-1] * 100; //为更公平，扩大一下范围       
+        $randNum = mt_rand(1, $proSum) % $arr[$num-1] + 1;  //$randNum 一定不大于 $arr[$num-1] 抽奖仅需一次即可
+        // 概率数组循环   
+        foreach ($arr as $k => $v) {   
+            if ($randNum <= $v) {   
+                $result = $proArr[$k];   
+                break;   
+            }        
+        }     
+        return $result;   
     }
 }
