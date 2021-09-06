@@ -1,6 +1,4 @@
 <?php
-
-
 namespace think\admin;
 
 /**
